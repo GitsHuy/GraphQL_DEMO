@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>GraphQL Client Demo</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<h1>Bảng điều khiển GraphQL</h1>
+
+<div class="container">
+    <div class="panel" style="flex: 2;">
+        <h2>Danh sách sản phẩm</h2>
+        <div class="filter-group">
+            <input type="number" id="filterCategoryId" placeholder="Nhập ID Category để lọc">
+            <button id="filter-btn">Lọc sản phẩm</button>
+            <button id="reset-filter-btn">Xem tất cả</button>
+        </div>
+        <table id="product-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Giá</th>
+                    <th>Mô tả</th>
+                </tr>
+            </thead>
+            <tbody id="product-table-body"></tbody>
+        </table>
+    </div>
+
+    <div class="panel" style="flex: 1;">
+        <h2>Thêm sản phẩm mới</h2>
+        <form id="add-product-form">
+            <input type="text" id="title" placeholder="Tên sản phẩm" required>
+            <input type="number" id="price" placeholder="Giá" step="0.01" required>
+            <input type="text" id="desc" placeholder="Mô tả">
+            <input type="number" id="quantity" placeholder="Số lượng">
+            <input type="number" id="userId" placeholder="ID của User (người bán)" required>
+            <button type="submit">Thêm sản phẩm</button>
+        </form>
+        <div class="result-box" id="add-product-result"></div>
+        
+        <hr>
+        <h2>Xóa sản phẩm</h2>
+        <form id="delete-product-form">
+            <input type="number" id="deleteProductId" placeholder="Nhập ID sản phẩm cần xóa" required>
+            <button type="submit">Xóa sản phẩm</button>
+        </form>
+        <div class="result-box" id="delete-product-result"></div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="panel">
+        <h2>Quản lý User</h2>
+        <form id="update-user-form">
+            <h3>Sửa thông tin User</h3>
+            <input type="number" id="updateUserId" placeholder="ID User cần sửa" required>
+            <input type="text" id="updateFullname" placeholder="Họ tên mới" required>
+            <input type="email" id="updateEmail" placeholder="Email mới" required>
+            <button type="submit">Cập nhật User</button>
+        </form>
+        <div class="result-box" id="update-user-result"></div>
+        <hr>
+        <form id="delete-user-form">
+            <h3>Xóa User</h3>
+            <input type="number" id="deleteUserId" placeholder="ID User cần xóa" required>
+            <button type="submit">Xóa User</button>
+        </form>
+        <div class="result-box" id="delete-user-result"></div>
+    </div>
+    
+    <div class="panel">
+        <h2>Quản lý Category</h2>
+        <form id="update-category-form">
+            <h3>Sửa thông tin Category</h3>
+            <input type="number" id="updateCategoryId" placeholder="ID Category cần sửa" required>
+            <input type="text" id="updateCategoryName" placeholder="Tên Category mới" required>
+            <button type="submit">Cập nhật Category</button>
+        </form>
+        <div class="result-box" id="update-category-result"></div>
+        <hr>
+        <form id="delete-category-form">
+            <h3>Xóa Category</h3>
+            <input type="number" id="deleteCategoryId" placeholder="ID Category cần xóa" required>
+            <button type="submit">Xóa Category</button>
+        </form>
+        <div class="result-box" id="delete-category-result"></div>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+
+</body>
+</html>
