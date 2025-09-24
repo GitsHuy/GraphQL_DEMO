@@ -33,7 +33,6 @@ Khi bạn thêm một sản phẩm mới, thay vì phải tải lại toàn bộ
 - Truy cập vào đường dẫn sau: [http://localhost:8080](http://localhost:8080)  
 - Bạn sẽ thấy giao diện chính của chương trình.  
 
-*Do Google cấp phép*
 
 ### Bước 2: Các thao tác cơ bản (Thêm dữ liệu ban đầu)  
 Trước khi có thể thêm sản phẩm, hệ thống cần có thông tin về Người bán (User) và Danh mục (Category).
