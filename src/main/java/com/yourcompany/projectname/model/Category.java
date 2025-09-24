@@ -1,11 +1,9 @@
-package com.springboot.GraphQL_Springboot.model;
+package com.yourcompany.projectname.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,11 +16,12 @@ public class Category {
     private Long id;
 
     private String name;
+    
     private String images;
 
-    @ManyToMany(mappedBy = "categories")
+    // Quan hệ một-nhiều: Một Category có nhiều Product
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    @JsonIgnore
-    private Set<User> users = new HashSet<>();
+    private Set<Product> products = new HashSet<>();
 }

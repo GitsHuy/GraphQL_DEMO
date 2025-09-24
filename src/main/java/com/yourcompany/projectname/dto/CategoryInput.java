@@ -1,4 +1,4 @@
-package com.springboot.GraphQL_Springboot.dto;
+package com.yourcompany.projectname.dto;
 
 import lombok.Data;
 

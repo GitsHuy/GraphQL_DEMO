@@ -14,25 +14,39 @@ async function fetchGraphQL(query, variables = {}) {
             body: JSON.stringify({ query, variables })
         });
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorBody = await response.json();
+            throw new Error(errorBody.errors[0].message || `HTTP error! status: ${response.status}`);
         }
         return await response.json();
     } catch (error) {
         console.error("Lỗi khi gọi GraphQL:", error);
-        return { errors: [{ message: "Không thể kết nối đến máy chủ." }] };
+        return { errors: [{ message: error.message || "Không thể kết nối đến máy chủ." }] };
     }
 }
 
 /**
- * Hàm render danh sách sản phẩm lên bảng
+ * Hiển thị thông báo kết quả
+ * @param {HTMLElement} element - Div hiển thị kết quả
+ * @param {string} message - Nội dung thông báo
+ * @param {boolean} isSuccess - true nếu là thành công, false nếu là lỗi
+ */
+function showResult(element, message, isSuccess) {
+    element.textContent = message;
+    element.style.color = isSuccess ? 'green' : 'red';
+    element.style.backgroundColor = isSuccess ? '#e9f7ef' : '#fbe9e9';
+    element.style.border = `1px solid ${isSuccess ? 'green' : 'red'}`;
+}
+
+/**
+ * Render danh sách sản phẩm lên bảng
  * @param {Array} products - Mảng các đối tượng sản phẩm
  */
 function renderProducts(products) {
     const tableBody = document.getElementById('product-table-body');
-    tableBody.innerHTML = ''; // Xóa dữ liệu cũ
+    tableBody.innerHTML = '';
 
     if (!products || products.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="4">Không có sản phẩm nào.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="5">Không có sản phẩm nào.</td></tr>`;
         return;
     }
 
@@ -41,199 +55,115 @@ function renderProducts(products) {
             <td>${product.id}</td>
             <td>${product.title}</td>
             <td>${product.price}</td>
-            <td>${product.desc || ''}</td>
+            <td>${product.category?.name || 'N/A'}</td>
+            <td>${product.user?.fullname || 'N/A'}</td>
         </tr>`;
         tableBody.innerHTML += row;
     });
 }
 
 /**
- * Hàm lấy tất cả sản phẩm (sắp xếp theo giá) và render
+ * Lấy tất cả sản phẩm (sắp xếp theo giá) và render
  */
 async function fetchAllProducts() {
     const query = `
         query GetProductsSorted {
             productsSortedByPrice(sortDirection: "ASC") {
-                id
-                title
-                price
-                desc
+                id title price 
+                category { name }
+                user { fullname }
             }
-        }
-    `;
+        }`;
     const result = await fetchGraphQL(query);
-    if (result.data && result.data.productsSortedByPrice) {
-        renderProducts(result.data.productsSortedByPrice);
-    } else {
-        renderProducts([]); // Render bảng rỗng nếu có lỗi
-    }
+    renderProducts(result.data?.productsSortedByPrice);
 }
 
 /**
- * Hàm lấy sản phẩm theo Category và render
+ * Lấy sản phẩm theo Category và render
  * @param {string} categoryId - ID của category cần lọc
  */
 async function fetchProductsByCategory(categoryId) {
     const query = `
         query GetProductsByCategory($catId: ID!) {
             productsByCategory(categoryId: $catId) {
-                id
-                title
-                price
-                desc
+                id title price
+                category { name }
+                user { fullname }
             }
-        }
-    `;
-    const variables = { catId: categoryId };
-    const result = await fetchGraphQL(query, variables);
-    if (result.data && result.data.productsByCategory) {
-        renderProducts(result.data.productsByCategory);
-    } else {
-        renderProducts([]); // Render bảng rỗng nếu có lỗi
-    }
+        }`;
+    const result = await fetchGraphQL(query, { catId: categoryId });
+    renderProducts(result.data?.productsByCategory);
 }
+
 
 // --- GẮN CÁC SỰ KIỆN KHI TRANG TẢI XONG ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Tải danh sách sản phẩm ban đầu
     fetchAllProducts();
 
-    // 2. Sự kiện cho nút Lọc sản phẩm
-    document.getElementById('filter-btn').addEventListener('click', () => {
-        const categoryId = document.getElementById('filterCategoryId').value;
-        if (categoryId) {
-            fetchProductsByCategory(categoryId);
+    // --- SỰ KIỆN USER ---
+    document.getElementById('add-user-form').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const variables = {
+            user: {
+                fullname: document.getElementById('fullname').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            }
+        };
+        const mutation = `mutation CreateUser($user: UserInput!) { createUser(user: $user) { id fullname } }`;
+        const result = await fetchGraphQL(mutation, variables);
+        const resultDiv = document.getElementById('add-user-result');
+        if (result.data?.createUser) {
+            showResult(resultDiv, `Thêm thành công User: ${result.data.createUser.fullname} (ID: ${result.data.createUser.id})`, true);
+            this.reset();
+        } else {
+            showResult(resultDiv, `Lỗi: ${result.errors[0].message}`, false);
         }
     });
 
-    // 3. Sự kiện cho nút Reset Filter
-    document.getElementById('reset-filter-btn').addEventListener('click', () => {
-        document.getElementById('filterCategoryId').value = '';
-        fetchAllProducts();
+    // --- SỰ KIỆN CATEGORY ---
+    document.getElementById('add-category-form').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const variables = { category: { name: document.getElementById('categoryName').value } };
+        const mutation = `mutation CreateCategory($category: CategoryInput!) { createCategory(category: $category) { id name } }`;
+        const result = await fetchGraphQL(mutation, variables);
+        const resultDiv = document.getElementById('add-category-result');
+        if (result.data?.createCategory) {
+            showResult(resultDiv, `Thêm thành công Category: ${result.data.createCategory.name} (ID: ${result.data.createCategory.id})`, true);
+            this.reset();
+        } else {
+            showResult(resultDiv, `Lỗi: ${result.errors[0].message}`, false);
+        }
     });
 
-    // 4. Sự kiện Form Thêm sản phẩm
+    // --- SỰ KIỆN SẢN PHẨM ---
+    document.getElementById('filter-btn').addEventListener('click', () => {
+        const categoryId = document.getElementById('filterCategoryId').value;
+        if (categoryId) fetchProductsByCategory(categoryId);
+    });
+
+    document.getElementById('reset-filter-btn').addEventListener('click', fetchAllProducts);
+
     document.getElementById('add-product-form').addEventListener('submit', async function(event) {
         event.preventDefault();
         const variables = {
             product: {
                 title: document.getElementById('title').value,
                 price: parseFloat(document.getElementById('price').value),
-                desc: document.getElementById('desc').value,
-                quantity: parseInt(document.getElementById('quantity').value, 10) || 0,
-                userId: document.getElementById('userId').value
+                quantity: parseInt(document.getElementById('quantity').value) || 0,
+                userId: document.getElementById('userId').value,
+                categoryId: document.getElementById('categoryId').value
             }
         };
-        const mutation = `
-            mutation CreateProduct($product: ProductInput!) {
-                createProduct(product: $product) { id title }
-            }`;
+        const mutation = `mutation CreateProduct($product: ProductInput!) { createProduct(product: $product) { id title } }`;
         const result = await fetchGraphQL(mutation, variables);
         const resultDiv = document.getElementById('add-product-result');
         if (result.data?.createProduct) {
-            resultDiv.innerHTML = `<p style="color: green;">Thêm thành công sản phẩm: ${result.data.createProduct.title}</p>`;
+            showResult(resultDiv, `Thêm thành công sản phẩm: ${result.data.createProduct.title}`, true);
             fetchAllProducts();
             this.reset();
         } else {
-            resultDiv.innerHTML = `<p style="color: red;">Lỗi: ${result.errors[0].message}</p>`;
-        }
-    });
-
-    // 5. Sự kiện Form Xóa sản phẩm
-    document.getElementById('delete-product-form').addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const productId = document.getElementById('deleteProductId').value;
-        const mutation = `mutation DeleteProduct($id: ID!) { deleteProduct(id: $id) }`;
-        const result = await fetchGraphQL(mutation, { id: productId });
-        const resultDiv = document.getElementById('delete-product-result');
-        if (result.data?.deleteProduct === true) {
-            resultDiv.innerHTML = `<p style="color: green;">Đã xóa thành công sản phẩm ID: ${productId}</p>`;
-            fetchAllProducts();
-            this.reset();
-        } else {
-            resultDiv.innerHTML = `<p style="color: red;">Lỗi: Không thể xóa sản phẩm hoặc ID không tồn tại.</p>`;
-        }
-    });
-    
-    // 6. Sự kiện Form Sửa User
-    document.getElementById('update-user-form').addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const userId = document.getElementById('updateUserId').value;
-        const variables = {
-            id: userId,
-            user: {
-                fullname: document.getElementById('updateFullname').value,
-                email: document.getElementById('updateEmail').value,
-                // Để đơn giản, không cập nhật password ở đây
-                password: "defaultpassword",
-                phone: ""
-            }
-        };
-        const mutation = `
-            mutation UpdateUser($id: ID!, $user: UserInput!) {
-                updateUser(id: $id, user: $user) { id fullname }
-            }`;
-        const result = await fetchGraphQL(mutation, variables);
-        const resultDiv = document.getElementById('update-user-result');
-        if (result.data?.updateUser) {
-            resultDiv.innerHTML = `<p style="color: green;">Cập nhật thành công User: ${result.data.updateUser.fullname}</p>`;
-            this.reset();
-        } else {
-            resultDiv.innerHTML = `<p style="color: red;">Lỗi: ${result.errors[0].message}</p>`;
-        }
-    });
-
-    // 7. Sự kiện Form Xóa User
-    document.getElementById('delete-user-form').addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const userId = document.getElementById('deleteUserId').value;
-        const mutation = `mutation DeleteUser($id: ID!) { deleteUser(id: $id) }`;
-        const result = await fetchGraphQL(mutation, { id: userId });
-        const resultDiv = document.getElementById('delete-user-result');
-        if (result.data?.deleteUser === true) {
-            resultDiv.innerHTML = `<p style="color: green;">Đã xóa thành công User ID: ${userId}</p>`;
-            this.reset();
-        } else {
-            resultDiv.innerHTML = `<p style="color: red;">Lỗi: Không thể xóa User hoặc ID không tồn tại.</p>`;
-        }
-    });
-
-    // 8. Sự kiện Form Sửa Category
-    document.getElementById('update-category-form').addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const categoryId = document.getElementById('updateCategoryId').value;
-        const variables = {
-            id: categoryId,
-            category: {
-                name: document.getElementById('updateCategoryName').value
-            }
-        };
-        const mutation = `
-            mutation UpdateCategory($id: ID!, $category: CategoryInput!) {
-                updateCategory(id: $id, category: $category) { id name }
-            }`;
-        const result = await fetchGraphQL(mutation, variables);
-        const resultDiv = document.getElementById('update-category-result');
-        if (result.data?.updateCategory) {
-            resultDiv.innerHTML = `<p style="color: green;">Cập nhật thành công Category: ${result.data.updateCategory.name}</p>`;
-            this.reset();
-        } else {
-            resultDiv.innerHTML = `<p style="color: red;">Lỗi: ${result.errors[0].message}</p>`;
-        }
-    });
-
-    // 9. Sự kiện Form Xóa Category
-    document.getElementById('delete-category-form').addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const categoryId = document.getElementById('deleteCategoryId').value;
-        const mutation = `mutation DeleteCategory($id: ID!) { deleteCategory(id: $id) }`;
-        const result = await fetchGraphQL(mutation, { id: categoryId });
-        const resultDiv = document.getElementById('delete-category-result');
-        if (result.data?.deleteCategory === true) {
-            resultDiv.innerHTML = `<p style="color: green;">Đã xóa thành công Category ID: ${categoryId}</p>`;
-            this.reset();
-        } else {
-            resultDiv.innerHTML = `<p style="color: red;">Lỗi: Không thể xóa Category hoặc ID không tồn tại.</p>`;
+            showResult(resultDiv, `Lỗi: ${result.errors[0].message}`, false);
         }
     });
 });
